@@ -1,0 +1,7 @@
+{
+  "id": "/test/hdfs",
+   "cmd": "export PATH=$MESOS_DIRECTORY/hdfs-mesos-0.1.1/bin:$PATH && hadoop fs -ls hdfs://hdfs/ && rm -rf hdfs-test && hadoop fs -rm -r -f hdfs://hdfs/hdfs-test && hadoop fs -mkdir hdfs://hdfs/hdfs-test && mkdir hdfs-test && echo \"this is a test\" > hdfs-test/test1.txt && hadoop fs -put hdfs-test/test1.txt hdfs://hdfs/hdfs-test && hadoop fs -get hdfs://hdfs/hdfs-test/test1.txt hdfs-test/test2.txt && rm -rf hdfs-test && hadoop fs -rm -r -f hdfs://hdfs/hdfs-test",
+   "uris": [
+     "https://s3.amazonaws.com/downloads.mesosphere.io/hdfs/artifacts/dcos/0.1.1/hdfs-mesos-0.1.1.tgz"
+   ]
+}
