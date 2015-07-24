@@ -1,0 +1,12 @@
+#!/usr/bin/python
+
+import sys, json;
+
+app_name = sys.argv[1]
+marathon_apps = sys.argv[2]
+json_app = json.loads(marathon_apps)
+
+print "Healthy   task count = " + str(json_app["tasksHealthy"])
+print "Running   task count = " + str(json_app["tasksRunning"])
+print "Staged    task count = " + str(json_app["tasksStaged"])
+print "Unhealthy task count = " + str(json_app["tasksUnhealthy"])

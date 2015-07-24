@@ -22,3 +22,7 @@ WORKDIR /dcos-cli/cli/env/bin
 ENV PATH=$PATH:/dcos-cli/cli/env/bin
 RUN dcos config append package.sources https://github.com/mesosphere/universe/archive/version-1.x.zip
 RUN dcos config set package.cache /tmp/dcos
+RUN dcos config set core.dcos_url http://foobar.com
+RUN dcos service || true
+RUN dcos package update
+CMD dcos config set core.dcos_url ${MASTER_URI} && ${CMD} 

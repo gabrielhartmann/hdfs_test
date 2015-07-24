@@ -1,0 +1,101 @@
+#!/bin/bash
+
+MASTER_URI=$1
+
+run ()
+{
+  ./run_dcos_cmd $MASTER_URI "$1"
+}
+
+service_up ()
+{
+  run "dcos marathon app version list $1"
+  return_val=$?
+
+  if [ $return_val == 0 ]; then
+    echo "*** Service '$1' is UP"
+  else
+    echo "*** Service '$1' is DOWN"
+  fi
+
+  return $return_val
+}
+
+chronos_up ()
+{
+  service_up "chronos"
+}
+
+hdfs_up ()
+{
+  service_up "hdfs"
+}
+
+start_chronos ()
+{
+  chronos_up
+  c_up=$?
+
+  if [ $c_up != 0 ]; then
+    run "dcos package install --yes chronos"
+  fi
+}
+
+start_hdfs ()
+{
+  hdfs_up
+  h_up=$?
+
+  if [ $h_up != 0 ]; then
+    run "dcos package install --yes hdfs"
+  fi
+}
+
+schedule_hdfs_test ()
+{
+  uuid=$(uuidgen)
+  test_name=hdfs-mesos-test-$uuid
+  echo "test_name = $test_name"
+  echo "Scheduling the hdfs test on Chronos"
+  curl -L -H 'Content-Type: application/json' -X POST -d '{ "schedule": "R1//PT2S", "name": "'"$test_name"'", "epsilon": "PT1M", "command": "export PATH=$MESOS_DIRECTORY/hdfs-mesos-0.1.2/bin:$PATH && hadoop fs -ls hdfs://hdfs/ && rm -rf hdfs-test && hadoop fs -rm -r -f hdfs://hdfs/hdfs-test && hadoop fs -mkdir hdfs://hdfs/hdfs-test && mkdir hdfs-test && echo \"this is a test\" > hdfs-test/test1.txt && hadoop fs -put hdfs-test/test1.txt hdfs://hdfs/hdfs-test && hadoop fs -get hdfs://hdfs/hdfs-test/test1.txt hdfs-test/test2.txt && rm -rf hdfs-test && hadoop fs -rm -r -f hdfs://hdfs/hdfs-test", "owner": "gabriel@mesosphere.io", "async": false, "uris": ["https://s3.amazonaws.com/downloads.mesosphere.io/hdfs/artifacts/dcos/0.1.2/hdfs-mesos-0.1.2.tgz"] }' $MASTER_URI/service/chronos/scheduler/iso8601
+
+  if [ $? != 0  ]; then
+    echo "Failed to schedule test."
+    exit 3
+  fi
+}
+
+
+get_chronos_jobs ()
+{
+  chronos_jobs=$(curl -s -L -X GET $MASTER_URI/service/chronos/scheduler/jobs)
+}
+
+
+# Main
+start_chronos
+start_hdfs
+schedule_hdfs_test
+
+# Sanity test should pass in 60s
+for i in `seq 1 10`;
+do
+  get_chronos_jobs
+  ./job_status "$test_name" "$chronos_jobs"
+  job_result=$?
+
+  if [ $job_result == 0 ]; then
+    echo "Test succeeded."
+    exit 0
+  elif [ $job_result == 1 ]; then
+    echo "Test failed."
+    exit 1
+  else 
+    echo "Test not scheduled yet, retrying..."
+    sleep 6
+  fi
+done
+
+echo "Test not scheduled within 60s"
+exit 4
+

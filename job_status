@@ -1,0 +1,23 @@
+#!/usr/bin/python
+
+import sys, json;
+
+job_name = sys.argv[1]
+chronos_jobs = sys.argv[2]
+json_object = json.loads(chronos_jobs)
+
+for job in json_object:
+  if job["name"] == job_name:
+    success_count = job["successCount"]
+    print job_name + " success count = " + str(success_count)
+
+    error_count = job["errorCount"]
+    print job_name + " error   count = " + str(error_count)
+
+    if success_count > 0:
+      sys.exit(0)
+
+    if error_count > 0:
+      sys.exit(1)
+
+sys.exit(2)

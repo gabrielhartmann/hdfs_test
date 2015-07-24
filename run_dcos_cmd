@@ -1,0 +1,12 @@
+#!/bin/bash
+
+MASTER_URI=$1
+SVC_CMD=$2
+
+run ()
+{
+  echo "Running '$1' against $MASTER_URI"
+  docker run -e MASTER_URI=$MASTER_URI -e CMD="$1" -it gabrielhartmann/dcos-cli
+}
+
+run "$SVC_CMD"
