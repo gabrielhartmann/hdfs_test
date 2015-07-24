@@ -2,11 +2,46 @@
 
 import sys, json;
 
-app_name = sys.argv[1]
-marathon_apps = sys.argv[2]
-json_app = json.loads(marathon_apps)
+if len(sys.argv) != 6:
+  print "Usage: app_healthy <app_json> <expected_healthy_task_count> <expected_running_task_count> <expected_staged_task_count> <expected_unhealthy_task_count>"
+  for arg in sys.argv:
+    print arg
+  sys.exit(1)
 
-print "Healthy   task count = " + str(json_app["tasksHealthy"])
-print "Running   task count = " + str(json_app["tasksRunning"])
-print "Staged    task count = " + str(json_app["tasksStaged"])
-print "Unhealthy task count = " + str(json_app["tasksUnhealthy"])
+expectedHealthyCount = int(sys.argv[2])
+expectedRunningCount = int(sys.argv[3])
+expectedStagedCount = int(sys.argv[4])
+expectedUnhealthyCount = int(sys.argv[5])
+
+marathon_app = sys.argv[1]
+json_app = json.loads(marathon_app)
+
+actualHealthyCount = json_app["app"]["tasksHealthy"]
+actualRunningCount = json_app["app"]["tasksRunning"]
+actualStagedCount = json_app["app"]["tasksStaged"]
+actualUnhealthyCount = json_app["app"]["tasksUnhealthy"]
+
+appName = json_app["app"]["id"]
+print "Checking health of " + appName
+
+if expectedHealthyCount != actualHealthyCount:
+  print "Actual   healthy task count = " + str(actualHealthyCount)
+  print "Expected healthy task count = " + str(expectedHealthyCount)
+  sys.exit(2)
+
+if expectedRunningCount != actualRunningCount:
+  print "Actual   running task count = " + str(actualRunningCount)
+  print "Expected running task count = " + str(expectedRunningCount)
+  sys.exit(3)
+
+if expectedStagedCount != actualStagedCount:
+  print "Actual   staged task count = " + str(actualStagedCount)
+  print "Expected staged task count = " + str(expectedStagedCount)
+  sys.exit(4)
+
+if expectedUnhealthyCount != actualUnhealthyCount:
+  print "Actual   unhealthy task count = " + str(actualUnhealthyCount)
+  print "Expected unhealthy task count = " + str(expectedUnhealthyCount)
+  sys.exit(5)
+
+print "Application " + appName + " is healthy."

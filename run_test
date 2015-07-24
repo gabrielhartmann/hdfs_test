@@ -7,49 +7,98 @@ run ()
   ./run_dcos_cmd $MASTER_URI "$1"
 }
 
-service_up ()
+app_installed ()
 {
-  run "dcos marathon app version list $1"
+  run "dcos package list $1"
+}
+
+app_up ()
+{
+  app=$(curl -s -L -X GET $MASTER_URI/service/marathon/v2/apps/$1)
+  ./app_healthy "$app" $2 $3 $4 $5
   return_val=$?
 
   if [ $return_val == 0 ]; then
-    echo "*** Service '$1' is UP"
+    echo "Application '$1' is UP"
   else
-    echo "*** Service '$1' is DOWN"
+    echo "Application '$1' is DOWN"
   fi
 
   return $return_val
 }
 
+chronos_installed ()
+{
+  app_installed "chronos"
+}
+
 chronos_up ()
 {
-  service_up "chronos"
+  app_up "chronos" 1 1 0 0
+}
+
+hdfs_installed ()
+{
+  app_installed "hdfs"
 }
 
 hdfs_up ()
 {
-  service_up "hdfs"
+  app_up "hdfs" 1 1 0 0
 }
 
 start_chronos ()
 {
-  chronos_up
-  c_up=$?
+  chronos_installed
+  c_installed=$?
 
-  if [ $c_up != 0 ]; then
+  if [ $c_installed != 0 ]; then
+    echo "Installing chronos"
     run "dcos package install --yes chronos"
   fi
+
+ # Give chronos 120s to become healthy
+ for i in `seq 1 20`;
+ do
+   chronos_up
+   c_up=$?
+
+   if [ $c_up == 0 ]; then
+     return 0
+   fi
+
+   sleep 6
+ done
+
+ exit 1
 }
 
 start_hdfs ()
 {
-  hdfs_up
-  h_up=$?
+  hdfs_installed
+  h_installed=$?
 
-  if [ $h_up != 0 ]; then
+  if [ $h_installed != 0 ]; then
+    echo "Installing hdfs"
     run "dcos package install --yes hdfs"
   fi
+
+ # Give hdfs 180s to become healthy
+ for i in `seq 1 30`;
+ do
+   hdfs_up
+   h_up=$?
+
+   if [ $h_up == 0 ]; then
+     return 0
+   fi
+
+   sleep 6
+ done
+
+ exit 1
 }
+
 
 schedule_hdfs_test ()
 {
@@ -85,10 +134,10 @@ do
   job_result=$?
 
   if [ $job_result == 0 ]; then
-    echo "Test succeeded."
+    echo "Test PASSED."
     exit 0
   elif [ $job_result == 1 ]; then
-    echo "Test failed."
+    echo "Test FAILED."
     exit 1
   else 
     echo "Test not scheduled yet, retrying..."
@@ -96,6 +145,6 @@ do
   fi
 done
 
-echo "Test not scheduled within 60s"
+echo "Test not completed within 60s"
 exit 4
 
